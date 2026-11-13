@@ -127,7 +127,7 @@ jobs:
             libgtk-4-dev libadwaita-1-dev libgstreamer1.0-dev \
             gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
             libxkbcommon-dev libx11-dev libxcursor-dev libxi-dev libxrandr-dev \
-            libgl-dev gobject-introspection libgobject-2.0-dev \
+            libgl-dev gobject-introspection libglib2.0-dev \
             wayland-protocols libwayland-dev libwayland-bin \
             curl xz-utils ca-certificates dpkg-dev \
             nodejs
