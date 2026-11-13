@@ -9,11 +9,6 @@ on:
         description: "Version string for the .deb, e.g. 1.4.0+wisp.1 (omit on tag-triggered runs)"
         required: false
         type: string
-    inputs:
-      version:
-        description: "Version string for the .deb (e.g. 1.4.1-dev+wisp.0)"
-        required: true
-        type: string
 
 concurrency:
   group: wisp-release
