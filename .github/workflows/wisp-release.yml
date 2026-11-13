@@ -102,3 +102,71 @@ jobs:
             git commit -m "wisp ${GITHUB_REF_NAME#v}"
             git push
           fi
+
+  build-deb:
+    needs: release
+    runs-on: ubuntu-latest
+    container: debian:12
+    timeout-minutes: 60
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Install system dependencies
+        run: |
+          apt-get update -q
+          apt-get install -y --no-install-recommends \
+            git python3 pkg-config pandoc gettext blueprint-compiler \
+            libgtk-4-dev libadwaita-1-dev libgstreamer1.0-dev \
+            gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
+            libxkbcommon-dev libx11-dev libxcursor-dev libxi-dev libxrandr-dev \
+            libgl-dev gobject-introspection libgobject-2.0-dev \
+            wayland-protocols libwayland-dev libwayland-bin \
+            curl xz-utils ca-certificates dpkg-dev \
+            nodejs
+
+      - name: Install GitHub CLI
+        run: |
+          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+            -o /usr/share/keyrings/githubcli-archive-keyring.gpg
+          echo "deb [arch=amd64 signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+            > /etc/apt/sources.list.d/github-cli.list
+          apt-get update -q
+          apt-get install -y gh
+
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Install Zig
+        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+        with:
+          version: 0.17.1
+
+      - name: Version
+        id: version
+        run: |
+          version=$(python3 dist/wisp/release_version.py "$GITHUB_REF_NAME" build.zig.zon)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        run: |
+          zig build install \
+            --prefix staging/usr \
+            -Doptimize=ReleaseFast \
+            "-Dversion-string=${{ steps.version.outputs.version }}" \
+            -Dinstalled-exe-path=/usr/bin/wisp \
+            -fno-sys=gtk4-layer-shell
+
+      - name: Package .deb
+        run: |
+          DEB="wisp_${{ steps.version.outputs.version }}_amd64.deb"
+          bash dist/wisp/make_deb.sh "${{ steps.version.outputs.version }}" staging "$DEB"
+          echo "deb=$DEB" >> "$GITHUB_OUTPUT"
+        id: package
+
+      - name: Upload to release
+        run: |
+          gh release upload "$GITHUB_REF_NAME" \
+            "${{ steps.package.outputs.deb }}" \
+            --clobber
