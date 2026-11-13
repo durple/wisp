@@ -123,7 +123,8 @@ jobs:
         run: |
           apt-get update -q
           apt-get install -y --no-install-recommends \
-            git python3 pkg-config pandoc gettext blueprint-compiler \
+            git python3 python3-pip python3-gi python3-gi-cairo \
+            pkg-config pandoc gettext \
             libgtk-4-dev libadwaita-1-dev libgstreamer1.0-dev \
             gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
             libxkbcommon-dev libx11-dev libxcursor-dev libxi-dev libxrandr-dev \
@@ -131,6 +132,9 @@ jobs:
             wayland-protocols libwayland-dev libwayland-bin \
             curl xz-utils ca-certificates dpkg-dev \
             nodejs
+          # Install blueprint-compiler >= 0.20.0 (distro pkg is too old).
+          # --no-deps relies on system python3-gi for the PyGObject import.
+          pip3 install --break-system-packages --no-deps 'blueprint-compiler>=0.20.0'
 
       - name: Install GitHub CLI
         run: |
@@ -163,11 +167,9 @@ jobs:
 
       - name: Prepare source
         run: |
-          # Treat as a tarball build: removes the .git-checkout blueprint version check.
-          # Version is already pinned via -Dversion-string.
-          rm -rf .git
-          # Wrap pandoc to disable backtick-as-TeX-math, which causes spurious parse errors.
-          printf '#!/bin/sh\nexec /usr/bin/pandoc "$@" --from=markdown-tex_math_backtick\n' \
+          # Wrap pandoc to disable tex_math_dollars, which misparses $XDG_CONFIG_HOME
+          # in the docs as the start of a TeX math expression.
+          printf '#!/bin/sh\nexec /usr/bin/pandoc "$@" -f markdown-tex_math_dollars\n' \
             > /usr/local/bin/pandoc
           chmod +x /usr/local/bin/pandoc
 
