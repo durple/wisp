@@ -3,6 +3,17 @@ name: Wisp Release
 on:
   push:
     tags: ["v*-wisp.*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version string for the .deb, e.g. 1.4.0+wisp.1 (omit on tag-triggered runs)"
+        required: false
+        type: string
+    inputs:
+      version:
+        description: "Version string for the .deb (e.g. 1.4.1-dev+wisp.0)"
+        required: true
+        type: string
 
 concurrency:
   group: wisp-release
@@ -104,7 +115,8 @@ jobs:
           fi
 
   build-deb:
-    needs: release
+    needs: [release]
+    if: always() && (needs.release.result == 'success' || needs.release.result == 'skipped' || needs.release.result == 'failure')
     runs-on: ubuntu-latest
     container: debian:12
     timeout-minutes: 60
@@ -146,7 +158,11 @@ jobs:
       - name: Version
         id: version
         run: |
-          version=$(python3 dist/wisp/release_version.py "$GITHUB_REF_NAME" build.zig.zon)
+          if [ -n "${{ inputs.version }}" ]; then
+            version="${{ inputs.version }}"
+          else
+            version=$(python3 dist/wisp/release_version.py "$GITHUB_REF_NAME" build.zig.zon)
+          fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
       - name: Build
@@ -166,7 +182,15 @@ jobs:
         id: package
 
       - name: Upload to release
+        if: github.event_name == 'push'
         run: |
           gh release upload "$GITHUB_REF_NAME" \
             "${{ steps.package.outputs.deb }}" \
             --clobber
+
+      - name: Upload artifact (manual test)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: wisp-deb
+          path: "*.deb"
