@@ -114,7 +114,7 @@ jobs:
     needs: [release]
     if: always() && (needs.release.result == 'success' || needs.release.result == 'skipped' || needs.release.result == 'failure')
     runs-on: ubuntu-latest
-    container: debian:12
+    container: debian:13
     timeout-minutes: 60
     env:
       GH_TOKEN: ${{ github.token }}
