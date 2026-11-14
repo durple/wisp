@@ -138,7 +138,9 @@ fn valueSubtitle(opt: schema_mod.Option, arena: std.mem.Allocator) [:0]const u8 
     switch (opt.kind) {
         .repeatable, .keybind => {
             if (opt.values.len == 0) return "(none)";
-            return std.fmt.allocPrintZ(arena, "{d} entries", .{opt.values.len}) catch "(many)";
+            // allocPrintZ doesn't exist in Zig 0.17; embed the null and slice.
+            const s = std.fmt.allocPrint(arena, "{d} entries\x00", .{opt.values.len}) catch return "(many)";
+            return s[0 .. s.len - 1 :0];
         },
         else => {
             if (opt.values.len > 0) return opt.values[0];
