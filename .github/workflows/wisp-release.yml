@@ -180,6 +180,7 @@ jobs:
             -Doptimize=ReleaseFast \
             "-Dversion-string=${{ steps.version.outputs.version }}" \
             -Dinstalled-exe-path=/usr/bin/wisp \
+            -Dcpu=baseline \
             -fno-sys=gtk4-layer-shell
 
       - name: Package .deb
