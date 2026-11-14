@@ -10,6 +10,7 @@ const ext = @import("ext.zig");
 pub const Application = @import("class/application.zig").Application;
 pub const Window = @import("class/window.zig").Window;
 pub const Config = @import("class/config.zig").Config;
+pub const SettingsWindow = @import("class/settings_window.zig").SettingsWindow;
 pub const Surface = @import("class/surface.zig").Surface;
 pub const RenderSurface = @import("class/render_surface.zig").RenderSurface;
 

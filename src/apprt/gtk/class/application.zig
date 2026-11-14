@@ -43,6 +43,7 @@ const Window = @import("window.zig").Window;
 const Tab = @import("tab.zig").Tab;
 const CloseConfirmationDialog = @import("close_confirmation_dialog.zig").CloseConfirmationDialog;
 const ConfigErrorsDialog = @import("config_errors_dialog.zig").ConfigErrorsDialog;
+const SettingsWindow = @import("settings_window.zig").SettingsWindow;
 const GlobalShortcuts = @import("global_shortcuts.zig").GlobalShortcuts;
 const OpenURI = @import("../portal.zig").OpenURI;
 const media = @import("../media.zig");
@@ -2668,8 +2669,11 @@ const Action = struct {
         defer alloc.free(path);
 
         switch (value) {
-            // No settings window on GTK yet, so fall back to the OS editor.
-            .settings, .os_open => {
+            .settings => {
+                SettingsWindow.open();
+            },
+
+            .os_open => {
                 // Open it using openUrl. "path" isn't actually a URL but
                 // at the time of writing that works just fine for GTK.
                 openUrl(self, .{ .kind = .text, .url = path });
