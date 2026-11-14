@@ -1977,6 +1977,7 @@ pub const Application = extern struct {
             const target_map: std.StaticStringMap(CoreApp.Message.OpenConfig) = .initComptime(&.{
                 .{ "os-open", .os_open },
                 .{ "new-window", .new_window },
+                .{ "settings", .settings },
             });
 
             const parameter = parameter_ orelse {
