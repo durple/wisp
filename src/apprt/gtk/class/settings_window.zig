@@ -68,7 +68,7 @@ pub const SettingsWindow = extern struct {
         const arena = s.arena.allocator();
 
         // Create one page and one group per category, in enum order.
-        const n_cats = @typeInfo(Category).@"enum".fields.len;
+        const n_cats = @typeInfo(Category).@"enum".field_names.len;
         var pages: [n_cats]*adw.PreferencesPage = undefined;
         var groups: [n_cats]*adw.PreferencesGroup = undefined;
 
