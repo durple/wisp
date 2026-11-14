@@ -1177,15 +1177,8 @@ pub const Application = extern struct {
 
     fn syncActionAccelerators(self: *Self) void {
         self.syncActionAccelerator("app.quit", .{ .quit = {} });
-        // Settings falls back to os_open on GTK, so prefer its (default) trigger.
-        const settings: input.Binding.Action = .{ .open_config = .settings };
-        self.syncActionAccelerator(
-            "app.open-config::os-open",
-            if (self.private().config.get().keybind.set.getTrigger(settings) != null)
-                settings
-            else
-                .{ .open_config = .os_open },
-        );
+        self.syncActionAccelerator("app.open-config::settings", .{ .open_config = .settings });
+        self.syncActionAccelerator("app.open-config::os-open", .{ .open_config = .os_open });
         self.syncActionAccelerator("app.open-config::new-window", .{ .open_config = .new_window });
         self.syncActionAccelerator("app.reload-config", .{ .reload_config = {} });
         self.syncActionAccelerator("win.toggle-inspector", .{ .inspector = .toggle });
@@ -1973,37 +1966,40 @@ pub const Application = extern struct {
         parameter_: ?*glib.Variant,
         self: *Self,
     ) callconv(.c) void {
-        const target: CoreApp.Message.OpenConfig = target: {
-            const target_map: std.StaticStringMap(CoreApp.Message.OpenConfig) = .initComptime(&.{
-                .{ "os-open", .os_open },
-                .{ "new-window", .new_window },
-                .{ "settings", .settings },
+        const parameter = parameter_ orelse {
+            log.warn("no parameter provided to app.open-config action", .{});
+            return;
+        };
+
+        const s_variant_type = glib.ext.VariantType.newFor([:0]const u8);
+        defer s_variant_type.free();
+
+        if (parameter.isOfType(s_variant_type) == 0) {
+            log.warn("parameter to app.open-config action is of type '{s}' not '{s}'", .{
+                parameter.getTypeString(),
+                s_variant_type.peekString()[0..s_variant_type.getStringLength()],
             });
+            return;
+        }
 
-            const parameter = parameter_ orelse {
-                log.warn("no parameter provided to app.open-config action", .{});
-                break :target .os_open;
-            };
+        var len: usize = undefined;
+        const buf = parameter.getString(&len);
+        const str = buf[0..len];
 
-            const s_variant_type = glib.ext.VariantType.newFor([:0]const u8);
-            defer s_variant_type.free();
+        // "settings" is handled in the GTK layer directly.
+        if (std.mem.eql(u8, str, "settings")) {
+            SettingsWindow.open();
+            return;
+        }
 
-            if (parameter.isOfType(s_variant_type) == 0) {
-                log.warn("parameter to app.open-config action is of type '{s}' not '{s}'", .{
-                    parameter.getTypeString(),
-                    s_variant_type.peekString()[0..s_variant_type.getStringLength()],
-                });
-                break :target .os_open;
-            }
+        const target_map: std.StaticStringMap(CoreApp.Message.OpenConfig) = .initComptime(&.{
+            .{ "os-open", .os_open },
+            .{ "new-window", .new_window },
+        });
 
-            var len: usize = undefined;
-            const buf = parameter.getString(&len);
-            const str = buf[0..len];
-
-            break :target target_map.get(str) orelse {
-                log.warn("'{s}' is not configured as a target for the app.open-config action", .{str});
-                break :target .os_open;
-            };
+        const target = target_map.get(str) orelse {
+            log.warn("'{s}' is not configured as a target for the app.open-config action", .{str});
+            return;
         };
 
         _ = self.core().mailbox.push(global.io(), .{ .open_config = target }, .forever);
